@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define VERTICAL_OFFSET (15)
+#define HORIZONTAL_OFFSET (50)
+
 char *todos[256];
 int current_count, history_count;
 int render_row, todo_row;
@@ -11,7 +14,7 @@ int selected_row;
 void insert_todo(char *str, int index) {
   int i;
 
-  for (i = current_count + history_count; i >= current_count; i--) {
+  for (i = current_count + history_count; i >= index; i--) {
     todos[i + 1] = todos[i];
   }
   todos[current_count] = str;
@@ -42,7 +45,7 @@ void display_todos(int from, int to) {
   int i;
 
   for (i = from; i < to; i++) {
-    move(render_row, 0);
+    move(render_row + VERTICAL_OFFSET, HORIZONTAL_OFFSET);
     if (todo_row == selected_row) {
       attron(A_STANDOUT);
       printw("%i. %s", todo_row, todos[i]);
@@ -53,6 +56,12 @@ void display_todos(int from, int to) {
     render_row++;
     todo_row++;
   }
+}
+
+void display_label(char *str) {
+  move(render_row + VERTICAL_OFFSET, HORIZONTAL_OFFSET);
+  printw(str);
+  render_row++;
 }
 
 int main(int argc, char **argv) {
@@ -76,18 +85,12 @@ int main(int argc, char **argv) {
     render_row = 0;
     todo_row = 0;
 
-    move(render_row, 0);
-    printw("Uncompleted (%d):", current_count);
-    render_row++;
+    display_label("Uncompleted:");
     display_todos(0, current_count);
 
-    move(render_row, 0);
-    printw("-------------------------");
-    render_row++;
+    display_label("------------------------");
 
-    move(render_row, 0);
-    printw("Completed (%d):", history_count);
-    render_row++;
+    display_label("Completed:");
     display_todos(current_count, current_count + history_count);
 
     refresh();
@@ -128,19 +131,13 @@ int main(int argc, char **argv) {
 
       input_buffer[i] = '\0';
       input_allocated = malloc(i);
-      if (input_allocated == NULL) {
-        quit = 1;
-        continue;
-      }
 
       strcpy(input_allocated, input_buffer);
       insert_todo(input_allocated, current_count);
 
-      clear();
     } else if (command_ch == '\n') {
       if (current_count > selected_row) {
         complete_todo(selected_row);
-        clear();
       }
     } else if (command_ch == 'e') {
       strcpy(input_buffer, todos[selected_row]);
@@ -165,11 +162,9 @@ int main(int argc, char **argv) {
       }
       input_buffer[i] = '\0';
 
-      clear();
       strcpy(todos[selected_row], input_buffer);
     } else if (command_ch == 'd') {
       remove_todo(selected_row);
-      clear();
     } else if ('0' <= command_ch && command_ch <= '9') {
       if (current_count + history_count > command_ch - '0') {
         selected_row = command_ch - '0';
@@ -180,8 +175,12 @@ int main(int argc, char **argv) {
       printw("Unknown command: %c\n", command_ch);
       attroff(A_BOLD);
     }
+    clear();
   }
 
+  for (i = 0; i < current_count + history_count; i++) {
+    free(todos[i]);
+  }
   endwin();
   return 0;
 }

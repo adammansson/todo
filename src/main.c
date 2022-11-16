@@ -5,8 +5,10 @@
 
 char *todos[256];
 int current_count, history_count;
+int render_row, todo_row;
+int selected_row;
 
-void add_todo(char *str) {
+void insert_todo(char *str, int index) {
   int i;
 
   for (i = current_count + history_count; i >= current_count; i--) {
@@ -16,22 +18,46 @@ void add_todo(char *str) {
   current_count++;
 }
 
-void complete_todo(int selected_index) {
+void remove_todo(int index) {
   int i;
 
-  todos[current_count + history_count] = todos[selected_index];
-  for (i = selected_index; i < current_count + history_count; i++) {
+  if (index < current_count) {
+    current_count--;
+  } else {
+    history_count--;
+  }
+
+  for (i = index; i < current_count + history_count; i++) {
     todos[i] = todos[i + 1];
   }
-  current_count--;
+}
+
+void complete_todo(int index) {
+  todos[current_count + history_count] = todos[index];
   history_count++;
+  remove_todo(index);
+}
+
+void display_todos(int from, int to) {
+  int i;
+
+  for (i = from; i < to; i++) {
+    move(render_row, 0);
+    if (todo_row == selected_row) {
+      attron(A_STANDOUT);
+      printw("%i. %s", todo_row, todos[i]);
+      attroff(A_STANDOUT);
+    } else {
+      printw("%i. %s", todo_row, todos[i]);
+    }
+    render_row++;
+    todo_row++;
+  }
 }
 
 int main(int argc, char **argv) {
   int quit, row, col, i;
   int command_ch, input_ch;
-  int selected_row;
-  int render_row, todo_row;
   char input_buffer[256];
   char *input_allocated;
 
@@ -53,18 +79,7 @@ int main(int argc, char **argv) {
     move(render_row, 0);
     printw("Uncompleted (%d):", current_count);
     render_row++;
-    for (int i = 0; i < current_count; i++) {
-      move(render_row, 0);
-      if (todo_row == selected_row) {
-        attron(A_STANDOUT);
-        printw("%i. %s", todo_row, todos[i]);
-        attroff(A_STANDOUT);
-      } else {
-        printw("%i. %s", todo_row, todos[i]);
-      }
-      render_row++;
-      todo_row++;
-    }
+    display_todos(0, current_count);
 
     move(render_row, 0);
     printw("-------------------------");
@@ -73,18 +88,8 @@ int main(int argc, char **argv) {
     move(render_row, 0);
     printw("Completed (%d):", history_count);
     render_row++;
-    for (int i = current_count; i < current_count + history_count; i++) {
-      move(render_row, 0);
-      if (todo_row == selected_row) {
-        attron(A_STANDOUT);
-        printw("%i. %s", todo_row, todos[i]);
-        attroff(A_STANDOUT);
-      } else {
-        printw("%i. %s", todo_row, todos[i]);
-      }
-      render_row++;
-      todo_row++;
-    }
+    display_todos(current_count, current_count + history_count);
+
     refresh();
 
     command_ch = getch();
@@ -129,7 +134,7 @@ int main(int argc, char **argv) {
       }
 
       strcpy(input_allocated, input_buffer);
-      add_todo(input_allocated);
+      insert_todo(input_allocated, current_count);
 
       clear();
     } else if (command_ch == '\n') {
@@ -162,6 +167,9 @@ int main(int argc, char **argv) {
 
       clear();
       strcpy(todos[selected_row], input_buffer);
+    } else if (command_ch == 'd') {
+      remove_todo(selected_row);
+      clear();
     } else if ('0' <= command_ch && command_ch <= '9') {
       if (current_count + history_count > command_ch - '0') {
         selected_row = command_ch - '0';

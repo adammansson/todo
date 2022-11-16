@@ -6,52 +6,19 @@
 
 #define INPUT_BUFFER_LENGTH (256)
 
-char *todos[256];
-int current_count, history_count;
+vla_t *completed, *uncompleted;
 int render_row, todo_row;
 int selected_row;
 
-void insert_todo(char *str, int index) {
-  int i;
-
-  for (i = current_count + history_count; i >= index; i--) {
-    todos[i + 1] = todos[i];
-  }
-  todos[current_count] = str;
-  current_count++;
-}
-
-void remove_todo(int index) {
-  int i;
-
-  if (index < current_count) {
-    current_count--;
-  } else {
-    history_count--;
-  }
-
-  for (i = index; i < current_count + history_count; i++) {
-    todos[i] = todos[i + 1];
-  }
-}
-
-void complete_todo(int index) {
-  todos[current_count + history_count] = todos[index];
-  history_count++;
-  remove_todo(index);
-}
-
-void display_todos(int from, int to) {
-  int i;
-
-  for (i = from; i < to; i++) {
+void display_elements(vla_t *vla) {
+  for (int i = 0; i < vla->length; i++) {
     move(render_row, 0);
     if (todo_row == selected_row) {
       attron(A_STANDOUT);
-      printw("%i. %s", todo_row, todos[i]);
+      printw("%i. %s", todo_row, vla->data[i]);
       attroff(A_STANDOUT);
     } else {
-      printw("%i. %s", todo_row, todos[i]);
+      printw("%i. %s", todo_row, vla->data[i]);
     }
     render_row++;
     todo_row++;
@@ -70,14 +37,18 @@ int main(int argc, char **argv) {
   char input_buffer[INPUT_BUFFER_LENGTH];
   char *input_allocated;
 
+  printf("Initialising program\n");
+  uncompleted = VLA_new(8);
+  completed = VLA_new(8);
+
   quit = 0;
-  current_count = 0;
-  history_count = 0;
   selected_row = 0;
 
   initscr();
   getmaxyx(stdscr, row, col);
   raw();
+
+  noecho();
   curs_set(0);
 
   while (!quit) {
@@ -85,23 +56,21 @@ int main(int argc, char **argv) {
     todo_row = 0;
 
     display_label("Uncompleted:");
-    display_todos(0, current_count);
+    display_elements(uncompleted);
 
     display_label("------------------------");
 
     display_label("Completed:");
-    display_todos(current_count, current_count + history_count);
+    display_elements(completed);
 
     refresh();
 
-    noecho();
     command_ch = getch();
-    echo();
     if (command_ch == 'q') {
       quit = 1;
       continue;
     } else if (command_ch == 'j') {
-      if (selected_row < current_count + history_count - 1) {
+      if (selected_row < completed->length + uncompleted->length - 1) {
         selected_row += 1;
       }
     } else if (command_ch == 'k') {
@@ -113,46 +82,21 @@ int main(int argc, char **argv) {
 
       move(row - 1, 0);
       printw("Adding todo: ");
+      echo();
       curs_set(1);
       getstr(input_buffer);
       curs_set(0);
+      noecho();
 
       input_allocated = malloc(strlen(input_buffer) + 1);
       strcpy(input_allocated, input_buffer);
-      insert_todo(input_allocated, current_count);
-
-      /*
-      i = 0;
-      while (i < 255) {
-        move(row - 1, 0);
-        attron(A_BOLD);
-        printw("Adding todo: %s\n", input_buffer);
-        attroff(A_BOLD);
-
-        input_ch = getch();
-        if (input_ch == '\n') {
-          break;
-        } else if (input_ch == 127 && i > 0) {
-          i--;
-          input_buffer[i] = 0;
-        } else {
-          input_buffer[i] = input_ch;
-          i++;
-        }
-      }
-
-      input_buffer[i] = '\0';
-
-      strcpy(input_allocated, input_buffer);
-      insert_todo(input_allocated, current_count);
-      */
-
+      VLA_append(uncompleted, input_allocated);
+      clear();
     } else if (command_ch == '\n') {
-      if (current_count > selected_row) {
-        complete_todo(selected_row);
-      }
+      VLA_append(completed, uncompleted->data[0]);
+      VLA_remove(uncompleted, 0);
     } else if (command_ch == 'e') {
-      strcpy(input_buffer, todos[selected_row]);
+      strcpy(input_buffer, uncompleted->data[selected_row]);
 
       i = strlen(input_buffer);
       while (i < 255) {
@@ -174,11 +118,11 @@ int main(int argc, char **argv) {
       }
       input_buffer[i] = '\0';
 
-      strcpy(todos[selected_row], input_buffer);
+      strcpy(uncompleted->data[selected_row], input_buffer);
     } else if (command_ch == 'd') {
-      remove_todo(selected_row);
+      VLA_remove(uncompleted, selected_row);
     } else if ('0' <= command_ch && command_ch <= '9') {
-      if (current_count + history_count > command_ch - '0') {
+      if (uncompleted->length + completed->length > command_ch - '0') {
         selected_row = command_ch - '0';
       }
     } else {
@@ -187,12 +131,16 @@ int main(int argc, char **argv) {
       printw("Unknown command: %c\n", command_ch);
       attroff(A_BOLD);
     }
-    clear();
   }
 
-  for (i = 0; i < current_count + history_count; i++) {
-    free(todos[i]);
+  for (i = 0; i < uncompleted->length; i++) {
+    free(uncompleted->data[i]);
+  }
+  for (i = 0; i < completed->length; i++) {
+    free(completed->data[i]);
   }
   endwin();
+  VLA_free(uncompleted);
+  VLA_free(completed);
   return 0;
 }

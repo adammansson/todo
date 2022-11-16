@@ -1,14 +1,15 @@
 #include "vla.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-vla_t *VLA_new(size_t length) {
+vla_t *VLA_new(size_t allocated) {
   vla_t *res;
 
   res = malloc(sizeof(vla_t));
-  res->data = calloc(length, sizeof(char *));
-  res->length = length;
-  res->_allocated = length;
+  res->data = calloc(allocated, sizeof(char *));
+  res->length = 0;
+  res->_allocated = allocated;
   return res;
 }
 
@@ -37,11 +38,10 @@ int VLA_insert(vla_t *self, unsigned int index, char *element) {
     VLA_expand(self);
   }
 
-  memmove(self->data + index * sizeof(char *),
-          self->data + (index + 1) * sizeof(char *),
+  memmove(&self->data[index + 1], &self->data[index],
           (self->length - index) * sizeof(char *));
 
-  memcpy(self->data + index * sizeof(char *), element, sizeof(char *));
+  self->data[index] = element;
   self->length += 1;
   return 0;
 }
@@ -55,8 +55,7 @@ int VLA_remove(vla_t *self, unsigned int index) {
     return 1;
   }
 
-  memmove(self->data + index * sizeof(char *),
-          self->data + (index + 1) * sizeof(char *),
+  memmove(&self->data[index], &self->data[index + 1],
           (self->length - index) * sizeof(char *));
   self->length -= 1;
   return 0;

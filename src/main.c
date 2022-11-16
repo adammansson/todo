@@ -1,10 +1,10 @@
+#include "vla.h"
 #include <curses.h>
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define VERTICAL_OFFSET (15)
-#define HORIZONTAL_OFFSET (50)
+#define INPUT_BUFFER_LENGTH (256)
 
 char *todos[256];
 int current_count, history_count;
@@ -45,7 +45,7 @@ void display_todos(int from, int to) {
   int i;
 
   for (i = from; i < to; i++) {
-    move(render_row + VERTICAL_OFFSET, HORIZONTAL_OFFSET);
+    move(render_row, 0);
     if (todo_row == selected_row) {
       attron(A_STANDOUT);
       printw("%i. %s", todo_row, todos[i]);
@@ -59,7 +59,7 @@ void display_todos(int from, int to) {
 }
 
 void display_label(char *str) {
-  move(render_row + VERTICAL_OFFSET, HORIZONTAL_OFFSET);
+  move(render_row, 0);
   printw(str);
   render_row++;
 }
@@ -67,7 +67,7 @@ void display_label(char *str) {
 int main(int argc, char **argv) {
   int quit, row, col, i;
   int command_ch, input_ch;
-  char input_buffer[256];
+  char input_buffer[INPUT_BUFFER_LENGTH];
   char *input_allocated;
 
   quit = 0;
@@ -78,7 +78,6 @@ int main(int argc, char **argv) {
   initscr();
   getmaxyx(stdscr, row, col);
   raw();
-  noecho();
   curs_set(0);
 
   while (!quit) {
@@ -95,7 +94,9 @@ int main(int argc, char **argv) {
 
     refresh();
 
+    noecho();
     command_ch = getch();
+    echo();
     if (command_ch == 'q') {
       quit = 1;
       continue;
@@ -108,8 +109,19 @@ int main(int argc, char **argv) {
         selected_row -= 1;
       }
     } else if (command_ch == 'a') {
-      memset(input_buffer, 0, 64);
+      memset(input_buffer, 0, INPUT_BUFFER_LENGTH);
 
+      move(row - 1, 0);
+      printw("Adding todo: ");
+      curs_set(1);
+      getstr(input_buffer);
+      curs_set(0);
+
+      input_allocated = malloc(strlen(input_buffer) + 1);
+      strcpy(input_allocated, input_buffer);
+      insert_todo(input_allocated, current_count);
+
+      /*
       i = 0;
       while (i < 255) {
         move(row - 1, 0);
@@ -130,10 +142,10 @@ int main(int argc, char **argv) {
       }
 
       input_buffer[i] = '\0';
-      input_allocated = malloc(i);
 
       strcpy(input_allocated, input_buffer);
       insert_todo(input_allocated, current_count);
+      */
 
     } else if (command_ch == '\n') {
       if (current_count > selected_row) {

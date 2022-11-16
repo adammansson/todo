@@ -138,10 +138,10 @@ int main(int argc, char **argv) {
         clear();
       }
     } else if (command_ch == 'e') {
-      // strcpy(buffer, uncompleted[selected_row]);
+      strcpy(input_buffer, todos[selected_row]);
 
       i = strlen(input_buffer);
-      while (1) {
+      while (i < 255) {
         move(row - 1, 0);
         attron(A_BOLD);
         printw("Editing todo: %s\n", input_buffer);
@@ -149,9 +149,8 @@ int main(int argc, char **argv) {
 
         input_ch = getch();
         if (input_ch == '\n') {
-          input_buffer[i] = '\0';
           break;
-        } else if (input_ch == 127) {
+        } else if (input_ch == 127 && i > 0) {
           i--;
           input_buffer[i] = 0;
         } else {
@@ -159,8 +158,10 @@ int main(int argc, char **argv) {
           i++;
         }
       }
+      input_buffer[i] = '\0';
+
       clear();
-      // strcpy(uncompleted[selected_row], buffer);
+      strcpy(todos[selected_row], input_buffer);
     } else {
       move(row - 1, 0);
       attron(A_BOLD);

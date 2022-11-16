@@ -1,17 +1,43 @@
 #include <curses.h>
 #include <ncurses.h>
+#include <stdlib.h>
 #include <string.h>
 
+char *todos[256];
+int current_count, history_count;
+
+void add_todo(char *str) {
+  int i;
+
+  for (i = current_count + history_count; i >= current_count; i--) {
+    todos[i + 1] = todos[i];
+  }
+  todos[current_count] = str;
+  current_count++;
+}
+
+void complete_todo(int selected_index) {
+  int i;
+
+  todos[current_count + history_count] = todos[selected_index];
+  for (i = selected_index; i < current_count + history_count; i++) {
+    todos[i] = todos[i + 1];
+  }
+  current_count--;
+  history_count++;
+}
+
 int main(int argc, char **argv) {
-  int quit, ch, input_ch, uncompleted_count, completed_count, selected_row,
-      current_row, render_row, row, col, i;
-  char uncompleted[64][64];
-  char completed[64][64];
-  char buffer[64];
+  int quit, row, col, i;
+  int command_ch, input_ch;
+  int selected_row;
+  int render_row, todo_row;
+  char input_buffer[256];
+  char *input_allocated;
 
   quit = 0;
-  uncompleted_count = 0;
-  completed_count = 0;
+  current_count = 0;
+  history_count = 0;
   selected_row = 0;
 
   initscr();
@@ -22,22 +48,22 @@ int main(int argc, char **argv) {
 
   while (!quit) {
     render_row = 0;
-    current_row = 0;
+    todo_row = 0;
 
     move(render_row, 0);
-    printw("Uncompleted:");
+    printw("Uncompleted (%d):", current_count);
     render_row++;
-    for (int i = 0; i < uncompleted_count; i++) {
+    for (int i = 0; i < current_count; i++) {
       move(render_row, 0);
-      if (current_row == selected_row) {
+      if (todo_row == selected_row) {
         attron(A_STANDOUT);
-        printw("%i. %s", current_row, uncompleted[i]);
+        printw("%i. %s", todo_row, todos[i]);
         attroff(A_STANDOUT);
       } else {
-        printw("%i. %s", current_row, uncompleted[i]);
+        printw("%i. %s", todo_row, todos[i]);
       }
       render_row++;
-      current_row++;
+      todo_row++;
     }
 
     move(render_row, 0);
@@ -45,70 +71,100 @@ int main(int argc, char **argv) {
     render_row++;
 
     move(render_row, 0);
-    printw("Completed:");
+    printw("Completed (%d):", history_count);
     render_row++;
-    for (int i = 0; i < completed_count; i++) {
+    for (int i = current_count; i < current_count + history_count; i++) {
       move(render_row, 0);
-      if (current_row == selected_row) {
+      if (todo_row == selected_row) {
         attron(A_STANDOUT);
-        printw("%i. %s", current_row, completed[i]);
+        printw("%i. %s", todo_row, todos[i]);
         attroff(A_STANDOUT);
       } else {
-        printw("%i. %s", current_row, completed[i]);
+        printw("%i. %s", todo_row, todos[i]);
       }
       render_row++;
-      current_row++;
+      todo_row++;
     }
     refresh();
 
-    ch = getch();
-    if (ch == 'q') {
+    command_ch = getch();
+    if (command_ch == 'q') {
       quit = 1;
-    } else if (ch == 'j') {
-      if (selected_row < uncompleted_count + completed_count - 1) {
+      continue;
+    } else if (command_ch == 'j') {
+      if (selected_row < current_count + history_count - 1) {
         selected_row += 1;
       }
-    } else if (ch == 'k') {
+    } else if (command_ch == 'k') {
       if (selected_row > 0) {
         selected_row -= 1;
       }
-    } else if (ch == 'a') {
-      memset(buffer, 0, 64);
+    } else if (command_ch == 'a') {
+      memset(input_buffer, 0, 64);
 
       i = 0;
-      while (i < 64) {
+      while (i < 255) {
         move(row - 1, 0);
         attron(A_BOLD);
-        printw("Adding todo: %s\n", buffer);
+        printw("Adding todo: %s\n", input_buffer);
         attroff(A_BOLD);
 
         input_ch = getch();
         if (input_ch == '\n') {
-          buffer[i] = '\0';
+          break;
+        } else if (input_ch == 127 && i > 0) {
+          i--;
+          input_buffer[i] = 0;
+        } else {
+          input_buffer[i] = input_ch;
+          i++;
+        }
+      }
+
+      input_buffer[i] = '\0';
+      input_allocated = malloc(i);
+      if (input_allocated == NULL) {
+        quit = 1;
+        continue;
+      }
+
+      strcpy(input_allocated, input_buffer);
+      add_todo(input_allocated);
+
+      clear();
+    } else if (command_ch == '\n') {
+      if (current_count > selected_row) {
+        complete_todo(selected_row);
+        clear();
+      }
+    } else if (command_ch == 'e') {
+      // strcpy(buffer, uncompleted[selected_row]);
+
+      i = strlen(input_buffer);
+      while (1) {
+        move(row - 1, 0);
+        attron(A_BOLD);
+        printw("Editing todo: %s\n", input_buffer);
+        attroff(A_BOLD);
+
+        input_ch = getch();
+        if (input_ch == '\n') {
+          input_buffer[i] = '\0';
           break;
         } else if (input_ch == 127) {
           i--;
-          buffer[i] = 0;
+          input_buffer[i] = 0;
         } else {
-          buffer[i] = input_ch;
+          input_buffer[i] = input_ch;
           i++;
         }
       }
       clear();
-      strcpy(uncompleted[uncompleted_count], buffer);
-      uncompleted_count++;
-    } else if (ch == '\n') {
-      if (selected_row < uncompleted_count) {
-        strcpy(completed[completed_count], uncompleted[selected_row]);
-        completed_count++;
-        strcpy(uncompleted[selected_row], "");
-        uncompleted_count--;
-        clear();
-      }
+      // strcpy(uncompleted[selected_row], buffer);
     } else {
       move(row - 1, 0);
       attron(A_BOLD);
-      printw("Unknown command: %c\n", ch);
+      printw("Unknown command: %c\n", command_ch);
       attroff(A_BOLD);
     }
   }

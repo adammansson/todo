@@ -162,6 +162,10 @@ int main(int argc, char **argv) {
 
       clear();
       strcpy(todos[selected_row], input_buffer);
+    } else if ('0' <= command_ch && command_ch <= '9') {
+      if (current_count + history_count > command_ch - '0') {
+        selected_row = command_ch - '0';
+      }
     } else {
       move(row - 1, 0);
       attron(A_BOLD);

@@ -12,10 +12,10 @@ void UI_display_todos(ui_t *self) {
     move(self->row_to_render, 0);
     if (i == self->selected_row) {
       attron(A_STANDOUT);
-      printw(VLA_get(self->elements, i));
+      printw("%s", VLA_get(self->elements, i));
       attroff(A_STANDOUT);
     } else {
-      printw(VLA_get(self->elements, i));
+      printw("%s", VLA_get(self->elements, i));
     }
     self->row_to_render++;
   }
@@ -61,14 +61,14 @@ void UI_toggle_todo(ui_t *self) {
 
 void UI_display_label(ui_t *self, char *str) {
   move(self->row_to_render, 0);
-  printw(str);
+  printw("%s", str);
   self->row_to_render++;
 }
 
 void UI_display_error(ui_t *self, char *str) {
   move(self->nbr_rows - 1, 0);
   attron(A_BOLD);
-  printw(str);
+  printw("%s", str);
   attroff(A_BOLD);
 }
 

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void UI_display_elements(ui_t *self) {
+void UI_display_todos(ui_t *self) {
   unsigned int i;
 
   for (i = 0; i < self->elements->length; i++) {

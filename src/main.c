@@ -28,7 +28,7 @@ int main(void) {
 
     UI_display_label(&ui, "Todo");
 
-    UI_display_elements(&ui);
+    UI_display_todos(&ui);
 
     refresh();
 
@@ -45,13 +45,14 @@ int main(void) {
       }
     } else if (command_ch == 'a') {
       UI_add_todo(&ui);
-    } else if (command_ch == '\n') {
+      clear();
+    } else if (command_ch == ' ') {
       UI_toggle_todo(&ui);
     } else {
+      clear();
       sprintf(label_buffer, "Unknown command: %c", command_ch);
       UI_display_error(&ui, label_buffer);
     }
-    clear();
   }
 
   endwin();

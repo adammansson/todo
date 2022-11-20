@@ -46,6 +46,9 @@ int main(void) {
     } else if (command_ch == 'a') {
       UI_add_todo(&ui);
       clear();
+    } else if (command_ch == 'e') {
+      UI_edit_todo(&ui);
+      clear();
     } else if (command_ch == ' ') {
       UI_toggle_todo(&ui);
     } else {

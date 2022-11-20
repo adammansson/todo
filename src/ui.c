@@ -45,6 +45,7 @@ void UI_add_todo(ui_t *self) {
   input_allocated[1] = ' ';
   input_allocated[2] = ']';
   input_allocated[3] = ' ';
+
   VLA_prepend(self->elements, input_allocated);
 }
 
@@ -56,26 +57,26 @@ void UI_edit_todo(ui_t *self) {
 
   strcpy(input_buffer, VLA_get(self->elements, self->selected_row) + 4);
 
-  move(self->nbr_rows - 1, 0);
   attron(A_BOLD);
-  printw("Editing todo: %s", input_buffer);
   curs_set(1);
 
   i = strlen(input_buffer);
   while (i < 255) {
     move(self->nbr_rows - 1, 0);
     clrtoeol();
-    printw("%i Editing todo: %s", i, input_buffer);
+    printw("Editing todo: %s", input_buffer);
     ch = getch();
 
-    if (ch == '\n') {
+    if (ch == 27) {
+      attroff(A_BOLD);
+      curs_set(0);
+      return;
+    } else if (ch == '\n') {
       break;
-    } else if (ch == 127) {
-      if (i > 0) {
-        i--;
-        input_buffer[i] = '\0';
-      }
-    } else {
+    } else if (ch == 127 && i > 0) {
+      i--;
+      input_buffer[i] = '\0';
+    } else if (32 <= ch && ch <= 127) {
       input_buffer[i] = ch;
       input_buffer[i + 1] = '\0';
       i++;
@@ -87,6 +88,7 @@ void UI_edit_todo(ui_t *self) {
 
   // dest as input_allocated + 4 to fit the brackets in the beginning
   strcpy(input_allocated + 4, input_buffer);
+
   input_allocated[0] = '[';
   input_allocated[1] = ' ';
   input_allocated[2] = ']';

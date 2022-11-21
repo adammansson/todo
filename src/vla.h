@@ -10,12 +10,12 @@ typedef struct vla {
   // number of elements in the array
   size_t length;
 
-  // amount of bytes currently allocated for the array
+  // amount of elements currently allocated for the array
   size_t _allocated;
 } vla_t;
 
 // create a new vla with an initial length
-vla_t *VLA_new(size_t length);
+vla_t *VLA_new(size_t initial_length);
 
 // free the pointer and the array it stores
 void VLA_free(vla_t *self);

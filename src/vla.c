@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-vla_t *VLA_new(size_t length) {
+vla_t *VLA_new(size_t initial_length) {
   vla_t *res;
 
   res = malloc(sizeof(vla_t));
-  res->_allocated = length * sizeof(char *);
+  res->_allocated = initial_length;
   res->data = malloc(res->_allocated * sizeof(char *));
   res->length = 0;
   return res;
@@ -35,7 +35,7 @@ static void VLA_expand(vla_t *self) {
   size_t new_allocated;
 
   new_allocated = self->_allocated * 2;
-  new_data = realloc(self->data, new_allocated);
+  new_data = realloc(self->data, new_allocated * sizeof(char *));
 
   self->data = new_data;
   self->_allocated = new_allocated;
@@ -46,7 +46,7 @@ int VLA_insert(vla_t *self, unsigned int index, char *element) {
     return 1;
   }
 
-  if (self->_allocated - self->length * sizeof(char *) <= 0) {
+  if (self->_allocated - self->length <= 0) {
     VLA_expand(self);
   }
 

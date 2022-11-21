@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define INPUT_BUFFER_LENGTH (256)
+
 void UI_display_todos(ui_t *self) {
   unsigned int i;
 
@@ -21,84 +23,67 @@ void UI_display_todos(ui_t *self) {
   }
 }
 
-void UI_add_todo(ui_t *self) {
-  char input_buffer[256];
-  char *input_allocated;
+static char *UI_get_input(ui_t *self, char *prompt, char *initial) {
+  char input_buffer[INPUT_BUFFER_LENGTH], *input_allocated;
+  int ch, current_length;
 
-  move(self->nbr_rows - 1, 0);
-  attron(A_BOLD);
-  printw("Adding todo: ");
-  echo();
-  curs_set(1);
-  getstr(input_buffer);
-  attroff(A_BOLD);
-  curs_set(0);
-  noecho();
-
-  // 4 chars for the brackets, strlen + 1 for length of string + \0
-  input_allocated = malloc(4 + strlen(input_buffer) + 1);
-
-  // dest as input_allocated + 4 to fit the brackets in the beginning
-  strcpy(input_allocated + 4, input_buffer);
-
-  input_allocated[0] = '[';
-  input_allocated[1] = ' ';
-  input_allocated[2] = ']';
-  input_allocated[3] = ' ';
-
-  VLA_prepend(self->elements, input_allocated);
-}
-
-void UI_edit_todo(ui_t *self) {
-  char input_buffer[256];
-  char *input_allocated;
-  int ch;
-  int i;
-
-  strcpy(input_buffer, VLA_get(self->elements, self->selected_row) + 4);
+  strcpy(input_buffer, initial);
 
   attron(A_BOLD);
   curs_set(1);
 
-  i = strlen(input_buffer);
-  while (i < 255) {
+  current_length = strlen(input_buffer);
+  while (current_length < INPUT_BUFFER_LENGTH - 1) {
     move(self->nbr_rows - 1, 0);
     clrtoeol();
-    printw("Editing todo: %s", input_buffer);
+    printw("%s %s", prompt, input_buffer + 4);
     ch = getch();
 
     if (ch == 27) {
       attroff(A_BOLD);
       curs_set(0);
-      return;
+      return NULL;
     } else if (ch == '\n') {
       break;
-    } else if (ch == 127 && i > 0) {
-      i--;
-      input_buffer[i] = '\0';
+    } else if (ch == 127 && current_length > 0) {
+      current_length--;
+      input_buffer[current_length] = '\0';
     } else if (32 <= ch && ch <= 127) {
-      input_buffer[i] = ch;
-      input_buffer[i + 1] = '\0';
-      i++;
+      input_buffer[current_length] = ch;
+      input_buffer[current_length + 1] = '\0';
+      current_length++;
     }
   }
 
-  // 4 chars for the brackets, strlen + 1 for length of string + \0
-  input_allocated = malloc(4 + strlen(input_buffer) + 1);
+  input_allocated = malloc(strlen(input_buffer) + 1);
 
-  // dest as input_allocated + 4 to fit the brackets in the beginning
-  strcpy(input_allocated + 4, input_buffer);
-
-  input_allocated[0] = '[';
-  input_allocated[1] = ' ';
-  input_allocated[2] = ']';
-  input_allocated[3] = ' ';
-
-  free(VLA_get(self->elements, self->selected_row));
-  self->elements->data[self->selected_row] = input_allocated;
+  strcpy(input_allocated, input_buffer);
 
   attroff(A_BOLD);
   curs_set(0);
+  return input_allocated;
+}
+
+void UI_add_todo(ui_t *self) {
+  char *res;
+
+  res = UI_get_input(self, "Adding todo:", "[ ] ");
+  if (res == NULL) {
+    return;
+  }
+  VLA_prepend(self->elements, res);
+}
+
+void UI_edit_todo(ui_t *self) {
+  char *initial, *res;
+
+  initial = VLA_get(self->elements, self->selected_row);
+  res = UI_get_input(self, "Editing todo:", initial);
+  if (res == NULL) {
+    return;
+  }
+  free(initial);
+  VLA_set(self->elements, self->selected_row, res);
 }
 
 void UI_toggle_todo(ui_t *self) {
@@ -113,7 +98,6 @@ void UI_toggle_todo(ui_t *self) {
     str[1] = ' ';
     VLA_prepend(self->elements, str);
   }
-  clear();
 }
 
 void UI_display_label(ui_t *self, char *str) {
@@ -129,7 +113,4 @@ void UI_display_error(ui_t *self, char *str) {
   attroff(A_BOLD);
 }
 
-void UI_move_selection(ui_t *self, int amount) {
-  self->selected_row += amount;
-  clear();
-}
+void UI_move_selection(ui_t *self, int amount) { self->selected_row += amount; }

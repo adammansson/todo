@@ -23,6 +23,9 @@ void VLA_free(vla_t *self);
 // return the element at index, return null if index is outside of range
 char *VLA_get(vla_t *self, unsigned int index);
 
+// set the element at index, return 0 if it worked
+int VLA_set(vla_t *self, unsigned int index, char *element);
+
 // insert element at index in self, return 0 if it worked
 int VLA_insert(vla_t *self, unsigned int index, char *element);
 

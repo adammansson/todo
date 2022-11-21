@@ -38,10 +38,12 @@ int main(void) {
     } else if (command_ch == 'j') {
       if (ui.selected_row < ui.elements->length - 1) {
         UI_move_selection(&ui, 1);
+        clear();
       }
     } else if (command_ch == 'k') {
       if (ui.selected_row > 0) {
         UI_move_selection(&ui, -1);
+        clear();
       }
     } else if (command_ch == 'a') {
       UI_add_todo(&ui);
@@ -51,6 +53,7 @@ int main(void) {
       clear();
     } else if (command_ch == ' ') {
       UI_toggle_todo(&ui);
+      clear();
     } else {
       clear();
       sprintf(label_buffer, "Unknown command: %c", command_ch);
